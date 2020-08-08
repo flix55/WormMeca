@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class Player : MonoBehaviour {
 
@@ -33,12 +34,19 @@ public class Player : MonoBehaviour {
 	public Vector3 preciseInput;
 	public Vector3 dashVelocity;
 
-	public bool isAttacking;
 	public bool isDashing;
 	public bool cannotAttack;
 	public bool cannoMove;
 	public bool isAtackingWithMouse;
-	public bool canDash;
+	public bool coolDownFinish;
+
+    public bool redTeam;
+    float XAsix;
+    float YAsix;
+    bool Attackk;
+    bool Dash;
+    [Space(30)]
+    public Image cerleMask;
 
 	// DO TILT ACELERATION
 	// CANCEL COMBO WHEN DASHING
@@ -47,17 +55,53 @@ public class Player : MonoBehaviour {
 
 		originalCountDown = countDownStart;
 		//attacking.SetActive (false);
-
+        SwitchTeams();
+        coolDownFinish = true;
+        ChangeColor();
 	}
-
+    public void SwitchTeams()
+    {
+        if(redTeam)
+        {
+            XAsix = Input.GetAxis ("Horizontal");
+            YAsix = -Input.GetAxis ("Vertical");
+            Attackk = Input.GetButtonDown ("Y");
+            Dash = Input.GetButtonDown ("X");
+        }
+        else
+        {
+            XAsix = Input.GetAxis ("Mouse X");
+            YAsix = -Input.GetAxis ("Mouse Y");
+            Attackk = Input.GetButtonDown ("Right Bumber");
+            Dash = Input.GetButtonDown ("X Button");
+        }
+    }
 	void Update () 
 	{
 		Mouvement ();
 		DashTwo ();
-		Timer ();
+		TimerCoolDown ();
         ShootLaser();
-        Cstick();
+        SwitchTeams();
 	}
+    void ChangeColor()
+    {
+        if(redTeam)
+        {
+            ColorSwitch(Color.red);
+        }
+        else
+        {
+            ColorSwitch(Color.blue);
+        }
+    }
+
+    void ColorSwitch(Color col)
+    {
+        Renderer rend = skin.GetComponent<Renderer>();
+        rend.material.shader = Shader.Find("HDRP/Lit");
+        rend.material.SetColor("_BaseColor", col);
+    }
 	void FixedUpdate()
 	{
 		if (!cannoMove) 
@@ -65,11 +109,10 @@ public class Player : MonoBehaviour {
 			rb.velocity = Vector3.ClampMagnitude (moveWithSpeed, speed);
 		}
 	}
-
 	void Mouvement()
 	{
-		moveInput = new Vector3 (Input.GetAxis ("Horizontal") * 100000, 0, Input.GetAxis ("Vertical") * 100000);
-		preciseInput = new Vector3 (Input.GetAxis ("Horizontal"), 0, Input.GetAxis ("Vertical"));
+		moveInput = new Vector3 (XAsix * 100000, 0, YAsix * 100000);
+		preciseInput = new Vector3 (XAsix, 0, YAsix);
 		if (preciseInput.magnitude < deadZone) 
 		{
 			// DEAD ZONE if the player have a really bad controller like me 
@@ -92,35 +135,27 @@ public class Player : MonoBehaviour {
 			lastDirection = dropShadowObject.transform.rotation * Vector3.forward;
 		}
 	}
-
-    void Cstick()
+    float fillAmount = 0;
+	void TimerCoolDown ()
     {
-        Vector3 cStickVec = new Vector3 (Input.GetAxis ("StickX"), 0, Input.GetAxis ("StickY"));
-        Debug.Log(cStickVec);
-    }
-	void Timer ()
-    {
-
-		if (startCombo == true) {
-
+		if (startCombo == true) 
+        {
 			countDownStart -= Time.deltaTime;
-			cannoMove = true;
-			isAttacking = true;
-			attacking.SetActive (true);
-
+            coolDownFinish = false;
+            cerleMask.fillAmount = countDownStart;
 		}
-
 		if (countDownStart <= 0) 
         {
-
+            coolDownFinish = true;
+            startCombo = false;
+            countDownStart = originalCountDown;
+            cerleMask.fillAmount = 2;
 		}
-
 	}
 	void Push(float distance, Vector3 direction){
 
 		dashVelocity = Vector3.Scale (direction, distance * new Vector3 ((Mathf.Log (1f / (Time.deltaTime * rb.drag + 1)) / -Time.deltaTime), 0, (Mathf.Log (1f / (Time.deltaTime * rb.drag + 1)) / -Time.deltaTime)));
 		rb.AddForce (dashVelocity, ForceMode.VelocityChange);
-
 	}
 	void lookDirection(int controleNumber2){
 
@@ -132,51 +167,33 @@ public class Player : MonoBehaviour {
 	}
 	void DashTwo(){
 
-		if (Input.GetButtonDown ("X") || Input.GetKeyDown(KeyCode.Space)) {
+		if (Dash || Input.GetKeyDown(KeyCode.Space)) {
 
 			if (isDashing == false) {
-				//DASH
 				skin.transform.rotation = Quaternion.LookRotation (lastDirection);
 				StartCoroutine(Dash2());
 				Push(dashDistance,lastDirection);
 			}
-
 		}
 	}
     void ShootLaser()
     {
-        if(Input.GetButtonDown("Y"))
+        if(Attackk)
         {
-            Debug.Log("ShootLaser");
+            startCombo = true;
+            if(coolDownFinish)
+                transform.GetComponent<Trow>().InstatiateTheBullet();
         }
     }
-	// REDO THIS WITH TIMMER
-	IEnumerator Trow(){
-
-		cannoMove = true;
-		moveWithSpeed = Vector3.zero;
-		yield return new WaitForSeconds (0.1f);
-		cannoMove = false;
-
-	}
 	IEnumerator Dash2(){
 
 		cannoMove = true;
 		cannotAttack = true;
 		isDashing = true;
-		yield return new WaitForSeconds (0.3f);
+		yield return new WaitForSeconds (0.2f);
 		cannotAttack = false;
 		cannoMove = false;
 		isDashing = false;
-
-	}
-	IEnumerator AttackWait(){
-
-		isAttacking = true;
-		cannoMove = true;
-		yield return new WaitForSeconds (0.3f);
-		isAttacking = false;
-		cannoMove = false;
 
 	}
 }
