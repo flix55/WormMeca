@@ -1,2 +1,2 @@
 # WormMeca
-weekly game jma 161
+weekly game jam 161
